@@ -8,7 +8,7 @@ import { shallowAccountsSelector } from "~/renderer/reducers/accounts";
 import { useCurrencyAccountSelect } from "~/renderer/components/PerCurrencySelectAccount/state";
 import type { UseCurrencyAccountSelectReturnType } from "~/renderer/components/PerCurrencySelectAccount/state";
 import { useSelector } from "react-redux";
-import type { Account, TokenAccount } from "@ledgerhq/live-common/lib/types";
+import type { Account, TokenAccount, AccountLike } from "@ledgerhq/live-common/lib/types";
 
 type State = {
   isLoading: boolean,
@@ -133,4 +133,31 @@ export const usePickExchangeRate = ({ exchangeRates, exchangeRate, setExchangeRa
     setExchangeRate(rate || null);
     // eslint-disable-next-line
   }, [exchangeRates]);
+};
+
+export const usePickDefaultAccount = (
+  accounts: AccountLike[],
+  fromAccount: AccountLike,
+  setFromAccount: AccountLike => void,
+) => {
+  useMemo(() => {
+    if (!fromAccount) {
+      const possibleDefaults = accounts.reduce((acc, account) => {
+        if (account.disabled) return acc;
+        if (account.currency.id === "ethereum") {
+          acc[0] = account;
+        }
+        if (account.currency.id === "bitcoin") {
+          acc[1] = account;
+        }
+        const maxFundsAccount = acc[2];
+        if (!maxFundsAccount || maxFundsAccount.balance < account.balance) {
+          acc[2] = account;
+        }
+        return acc;
+      }, []);
+      const defaultAccount = possibleDefaults.find(acc => !!acc);
+      defaultAccount && setFromAccount(defaultAccount);
+    }
+  }, [accounts, fromAccount, setFromAccount]);
 };
